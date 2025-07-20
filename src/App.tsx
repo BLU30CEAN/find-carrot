@@ -62,6 +62,7 @@ function App() {
   const [gameState, setGameState] = useState<GameState>(() =>
     initializeGame(DIFFICULTY_LEVELS.beginner)
   );
+  const [controlMode, setControlMode] = useState<"normal" | "flag" | "question">("normal");
 
   function initializeGame(level: typeof DIFFICULTY_LEVELS.beginner): GameState {
     const { rows, cols, mines } = level;
@@ -94,11 +95,13 @@ function App() {
 
   const resetGame = () => {
     setGameState(initializeGame(DIFFICULTY_LEVELS[difficulty]));
+    setControlMode("normal");
   };
 
   const changeDifficulty = (newDifficulty: typeof difficulty) => {
     setDifficulty(newDifficulty);
     setGameState(initializeGame(DIFFICULTY_LEVELS[newDifficulty]));
+    setControlMode("normal");
   };
 
   return (
@@ -112,11 +115,14 @@ function App() {
             difficulty={difficulty}
             onReset={resetGame}
             onDifficultyChange={changeDifficulty}
+            controlMode={controlMode}
+            onControlModeChange={setControlMode}
           />
           <GameBoard
             gameState={gameState}
             setGameState={setGameState}
             difficulty={difficulty}
+            controlMode={controlMode}
           />
         </GameContainer>
       </AppContainer>

@@ -85,40 +85,13 @@ const CellButton = styled.button<{
   }
 `;
 
-const Controls = styled.div`
-  display: flex;
-  margin: 20px 0;
-  gap: 10px;
-  justify-content: center;
-  align-items: center;
-  flex-wrap: wrap;
-`;
 
-const ControlButton = styled.button<{ isActive?: boolean }>`
-  background: ${(props) => (props.isActive ? "#000080" : "#c0c0c0")};
-  color: ${(props) => (props.isActive ? "#ffffff" : "#000000")};
-  border: 2px solid;
-  border-color: #808080 #ffffff #ffffff #808080;
-  padding: 8px 16px;
-  font-size: 14px;
-  font-weight: bold;
-  cursor: pointer;
-  transition: all 0.1s ease;
-
-  &:active {
-    border-color: #808080 #ffffff #ffffff #808080;
-    transform: translateY(1px);
-  }
-
-  &:hover {
-    background: ${(props) => (props.isActive ? "#000080" : "#d0d0d0")};
-  }
-`;
 
 interface GameBoardProps {
   gameState: GameState;
   setGameState: React.Dispatch<React.SetStateAction<GameState>>;
   difficulty: "beginner" | "intermediate" | "expert";
+  controlMode: "normal" | "flag" | "question";
 }
 
 const DIFFICULTY_LEVELS = {
@@ -131,11 +104,9 @@ const GameBoard: React.FC<GameBoardProps> = ({
   gameState,
   setGameState,
   difficulty,
+  controlMode,
 }) => {
   const { rows, cols } = DIFFICULTY_LEVELS[difficulty];
-  const [controlMode, setControlMode] = useState<
-    "normal" | "flag" | "question"
-  >("normal");
 
   // 당근 배치 함수
   const placeCarrots = useCallback(
@@ -383,6 +354,51 @@ const GameBoard: React.FC<GameBoardProps> = ({
     [gameState, controlMode, handleNormalClick, handleFlagClick, handleQuestionClick]
   );
 
+  // 우클릭 처리 (깃발/물음표 토글)
+  const handleRightClick = useCallback(
+    (e: React.MouseEvent, row: number, col: number) => {
+      e.preventDefault();
+      if (gameState.gameOver || gameState.gameWon) {
+        return;
+      }
+
+      const cell = gameState.board[row][col];
+      if (cell.isRevealed) {
+        return;
+      }
+
+      setGameState((prevState) => {
+        const newBoard = [...prevState.board];
+        const cell = newBoard[row][col];
+
+        // 깃발 -> 물음표 -> 없음 -> 깃발 순환
+        if (cell.isFlagged) {
+          cell.isFlagged = false;
+          cell.isQuestioned = true;
+          return {
+            ...prevState,
+            board: newBoard,
+            flagCount: prevState.flagCount - 1,
+          };
+        } else if (cell.isQuestioned) {
+          cell.isQuestioned = false;
+          return {
+            ...prevState,
+            board: newBoard,
+          };
+        } else {
+          cell.isFlagged = true;
+          return {
+            ...prevState,
+            board: newBoard,
+            flagCount: prevState.flagCount + 1,
+          };
+        }
+      });
+    },
+    [gameState, setGameState]
+  );
+
   // 게임 시작 시간 설정
   useEffect(() => {
     if (!gameState.startTime && !gameState.gameOver && !gameState.gameWon) {
@@ -390,16 +406,32 @@ const GameBoard: React.FC<GameBoardProps> = ({
         row.some((cell) => cell.isRevealed)
       );
       if (hasRevealedCells) {
-        setGameState((prev) => ({ ...prev, startTime: Date.now() }));
+        setGameState((prev) => ({
+          ...prev,
+          startTime: Date.now(),
+        }));
       }
     }
-  }, [
-    gameState.board,
-    gameState.startTime,
-    gameState.gameOver,
-    gameState.gameWon,
-    setGameState,
-  ]);
+  }, [gameState.board, gameState.startTime, gameState.gameOver, gameState.gameWon, setGameState]);
+
+  // 승리 조건 확인 (깃발이 정확히 꽂혔는지 확인)
+  useEffect(() => {
+    if (gameState.startTime && !gameState.gameOver && !gameState.gameWon) {
+      const flaggedCarrots = gameState.board
+        .flat()
+        .filter((cell) => cell.isFlagged && cell.isCarrot).length;
+      const totalCarrots = DIFFICULTY_LEVELS[difficulty].mines;
+      
+      // 모든 당근에 깃발이 정확히 꽂혔는지 확인
+      if (flaggedCarrots === totalCarrots && gameState.flagCount === totalCarrots) {
+        setGameState((prev) => ({
+          ...prev,
+          gameWon: true,
+          endTime: Date.now(),
+        }));
+      }
+    }
+  }, [gameState.board, gameState.startTime, gameState.gameOver, gameState.gameWon, gameState.flagCount, difficulty, setGameState]);
 
   const getCellContent = (cell: Cell) => {
     if (cell.isFlagged) return "🚩";
@@ -425,6 +457,7 @@ const GameBoard: React.FC<GameBoardProps> = ({
                 isCarrot={cell.isCarrot}
                 gameOver={gameState.gameOver}
                 onClick={() => handleCellClick(rowIndex, colIndex)}
+                onContextMenu={(e) => handleRightClick(e, rowIndex, colIndex)}
               >
                 {getCellContent(cell)}
               </CellButton>
@@ -432,27 +465,6 @@ const GameBoard: React.FC<GameBoardProps> = ({
           )}
         </BoardGrid>
       </BoardContainer>
-
-      <Controls>
-        <ControlButton
-          isActive={controlMode === "normal"}
-          onClick={() => setControlMode("normal")}
-        >
-          👆 일반
-        </ControlButton>
-        <ControlButton
-          isActive={controlMode === "flag"}
-          onClick={() => setControlMode("flag")}
-        >
-          🚩 깃발
-        </ControlButton>
-        <ControlButton
-          isActive={controlMode === "question"}
-          onClick={() => setControlMode("question")}
-        >
-          ❓ 물음표
-        </ControlButton>
-      </Controls>
     </>
   );
 };
