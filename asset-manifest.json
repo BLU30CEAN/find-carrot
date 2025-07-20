@@ -1,0 +1,15 @@
+{
+  "files": {
+    "main.css": "/find-carrot/static/css/main.0b14baca.css",
+    "main.js": "/find-carrot/static/js/main.1cefd040.js",
+    "static/js/453.92bbf2c2.chunk.js": "/find-carrot/static/js/453.92bbf2c2.chunk.js",
+    "index.html": "/find-carrot/index.html",
+    "main.0b14baca.css.map": "/find-carrot/static/css/main.0b14baca.css.map",
+    "main.1cefd040.js.map": "/find-carrot/static/js/main.1cefd040.js.map",
+    "453.92bbf2c2.chunk.js.map": "/find-carrot/static/js/453.92bbf2c2.chunk.js.map"
+  },
+  "entrypoints": [
+    "static/css/main.0b14baca.css",
+    "static/js/main.1cefd040.js"
+  ]
+}
