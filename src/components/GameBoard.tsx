@@ -1,7 +1,8 @@
 import React from 'react';
 import './GameBoard.css';
+import { GameBoardProps } from '../types/game';
 
-const GameBoard = ({ 
+const GameBoard: React.FC<GameBoardProps> = ({ 
   board, 
   revealed, 
   flagged, 
@@ -10,12 +11,13 @@ const GameBoard = ({
   gameOver, 
   gameWon 
 }) => {
-  const getCellContent = (row, col) => {
+  const getCellContent = (row: number, col: number): string => {
     const cellKey = `${row}-${col}`;
     const isRevealed = revealed.includes(cellKey);
     const isFlagged = flagged.includes(cellKey);
     const isQuestioned = questioned.includes(cellKey);
     const hasCarrot = board[row][col] === 'carrot';
+    const neighborCount = board[row][col];
 
     if (isFlagged) {
       return '🚩';
@@ -33,15 +35,21 @@ const GameBoard = ({
       return '🥕';
     }
 
+    // 주변 당근 개수 표시
+    if (typeof neighborCount === 'number' && neighborCount > 0) {
+      return neighborCount.toString();
+    }
+
     return '';
   };
 
-  const getCellClassName = (row, col) => {
+  const getCellClassName = (row: number, col: number): string => {
     const cellKey = `${row}-${col}`;
     const isRevealed = revealed.includes(cellKey);
     const isFlagged = flagged.includes(cellKey);
     const isQuestioned = questioned.includes(cellKey);
     const hasCarrot = board[row][col] === 'carrot';
+    const neighborCount = board[row][col];
 
     let className = 'cell';
 
@@ -53,6 +61,8 @@ const GameBoard = ({
       className += ' revealed';
       if (hasCarrot) {
         className += ' carrot';
+      } else if (typeof neighborCount === 'number' && neighborCount > 0) {
+        className += ` neighbor-${neighborCount}`;
       }
     }
 

@@ -2,9 +2,10 @@ import React, { useState, useEffect } from 'react';
 import './App.css';
 import GameBoard from './components/GameBoard';
 import GameInfo from './components/GameInfo';
+import { GameState, ClickMode } from './types/game';
 
-function App() {
-  const [gameState, setGameState] = useState({
+const App: React.FC = () => {
+  const [gameState, setGameState] = useState<GameState>({
     board: [],
     revealed: [],
     flagged: [],
@@ -17,7 +18,7 @@ function App() {
     remainingFlags: 10
   });
 
-  const [clickMode, setClickMode] = useState('normal'); // 'normal', 'flag', 'question'
+  const [clickMode, setClickMode] = useState<ClickMode>('normal');
 
   // 게임 초기화
   useEffect(() => {
@@ -26,25 +27,27 @@ function App() {
 
   // 타이머
   useEffect(() => {
-    let interval = null;
+    let interval: NodeJS.Timeout | null = null;
     if (gameState.startTime && !gameState.gameOver && !gameState.gameWon) {
       interval = setInterval(() => {
         setGameState(prev => ({
           ...prev,
-          elapsedTime: Math.floor((Date.now() - prev.startTime) / 1000)
+          elapsedTime: Math.floor((Date.now() - (prev.startTime || 0)) / 1000)
         }));
       }, 1000);
     }
-    return () => clearInterval(interval);
+    return () => {
+      if (interval) clearInterval(interval);
+    };
   }, [gameState.startTime, gameState.gameOver, gameState.gameWon]);
 
-  const initializeGame = () => {
+  const initializeGame = (): void => {
     const rows = 10;
     const cols = 10;
     const totalCarrots = 10;
     
     // 빈 보드 생성
-    const board = Array(rows).fill().map(() => Array(cols).fill(0));
+    const board: (string | number)[][] = Array(rows).fill(null).map(() => Array(cols).fill(0));
     
     // 당근 랜덤 배치
     let carrotsPlaced = 0;
@@ -54,6 +57,28 @@ function App() {
       if (board[row][col] !== 'carrot') {
         board[row][col] = 'carrot';
         carrotsPlaced++;
+      }
+    }
+
+    // 주변 당근 개수 계산
+    for (let row = 0; row < rows; row++) {
+      for (let col = 0; col < cols; col++) {
+        if (board[row][col] !== 'carrot') {
+          let count = 0;
+          // 8방향 체크
+          for (let dr = -1; dr <= 1; dr++) {
+            for (let dc = -1; dc <= 1; dc++) {
+              const newRow = row + dr;
+              const newCol = col + dc;
+              if (newRow >= 0 && newRow < rows && newCol >= 0 && newCol < cols) {
+                if (board[newRow][newCol] === 'carrot') {
+                  count++;
+                }
+              }
+            }
+          }
+          board[row][col] = count;
+        }
       }
     }
 
@@ -71,7 +96,7 @@ function App() {
     });
   };
 
-  const handleCellClick = (row, col) => {
+  const handleCellClick = (row: number, col: number): void => {
     if (gameState.gameOver || gameState.gameWon) return;
     
     // 게임 시작
@@ -90,7 +115,7 @@ function App() {
     }
   };
 
-  const handleNormalClick = (row, col, cellKey) => {
+  const handleNormalClick = (row: number, col: number, cellKey: string): void => {
     // 깃발이나 물음표가 있는 곳은 클릭 불가
     if (gameState.flagged.includes(cellKey) || gameState.questioned.includes(cellKey)) {
       return;
@@ -111,17 +136,57 @@ function App() {
       return;
     }
 
-    // 빈 공간을 클릭한 경우
+    // 빈 공간을 클릭한 경우 - 주변 자동 공개
+    const newRevealed = new Set([...gameState.revealed, cellKey]);
+    revealAdjacentCells(row, col, newRevealed);
+
     setGameState(prev => ({
       ...prev,
-      revealed: [...prev.revealed, cellKey]
+      revealed: Array.from(newRevealed)
     }));
 
     // 승리 조건 확인
     checkWinCondition();
   };
 
-  const handleFlagClick = (row, col, cellKey) => {
+  const revealAdjacentCells = (row: number, col: number, revealedSet: Set<string>): void => {
+    const rows = gameState.board.length;
+    const cols = gameState.board[0].length;
+    
+    // 현재 셀이 0인 경우에만 주변 셀들을 공개
+    if (gameState.board[row][col] === 0) {
+      for (let dr = -1; dr <= 1; dr++) {
+        for (let dc = -1; dc <= 1; dc++) {
+          const newRow = row + dr;
+          const newCol = col + dc;
+          const newCellKey = `${newRow}-${newCol}`;
+          
+          if (newRow >= 0 && newRow < rows && newCol >= 0 && newCol < cols) {
+            // 이미 공개되었거나 깃발/물음표가 있는 경우 스킵
+            if (revealedSet.has(newCellKey) || 
+                gameState.flagged.includes(newCellKey) || 
+                gameState.questioned.includes(newCellKey)) {
+              continue;
+            }
+            
+            revealedSet.add(newCellKey);
+            
+            // 주변 셀도 0이면 재귀적으로 공개
+            if (gameState.board[newRow][newCol] === 0) {
+              revealAdjacentCells(newRow, newCol, revealedSet);
+            }
+          }
+        }
+      }
+    }
+  };
+
+  const handleFlagClick = (row: number, col: number, cellKey: string): void => {
+    // 이미 공개된 곳에는 깃발 설치 불가
+    if (gameState.revealed.includes(cellKey)) {
+      return;
+    }
+
     // 이미 깃발이 있는 경우 제거
     if (gameState.flagged.includes(cellKey)) {
       setGameState(prev => ({
@@ -149,7 +214,12 @@ function App() {
     checkWinCondition();
   };
 
-  const handleQuestionClick = (row, col, cellKey) => {
+  const handleQuestionClick = (row: number, col: number, cellKey: string): void => {
+    // 이미 공개된 곳에는 물음표 설치 불가
+    if (gameState.revealed.includes(cellKey)) {
+      return;
+    }
+
     // 이미 물음표가 있는 경우 제거
     if (gameState.questioned.includes(cellKey)) {
       setGameState(prev => ({
@@ -166,24 +236,39 @@ function App() {
     }));
   };
 
-  const checkWinCondition = () => {
-    const allCarrotsFlagged = gameState.board.flat().every((cell, index) => {
-      const row = Math.floor(index / 10);
-      const col = index % 10;
-      const cellKey = `${row}-${col}`;
-      
-      if (cell === 'carrot') {
-        return gameState.flagged.includes(cellKey);
+  const checkWinCondition = (): void => {
+    let allCarrotsFlagged = true;
+    let carrotCount = 0;
+    let flaggedCarrotCount = 0;
+    let flaggedNonCarrotCount = 0;
+    
+    for (let row = 0; row < gameState.board.length; row++) {
+      for (let col = 0; col < gameState.board[row].length; col++) {
+        const cell = gameState.board[row][col];
+        const cellKey = `${row}-${col}`;
+        
+        if (cell === 'carrot') {
+          carrotCount++;
+          if (gameState.flagged.includes(cellKey)) {
+            flaggedCarrotCount++;
+          } else {
+            allCarrotsFlagged = false;
+          }
+        } else if (gameState.flagged.includes(cellKey)) {
+          flaggedNonCarrotCount++;
+        }
       }
-      return true;
-    });
+    }
 
+    console.log(`총 당근: ${carrotCount}, 깃발 꽂힌 당근: ${flaggedCarrotCount}, 잘못 꽂힌 깃발: ${flaggedNonCarrotCount}, 승리: ${allCarrotsFlagged}`);
+
+    // 모든 당근에 깃발이 꽂혀있으면 승리 (잘못 꽂힌 깃발 허용)
     if (allCarrotsFlagged) {
       setGameState(prev => ({ ...prev, gameWon: true }));
     }
   };
 
-  const resetGame = () => {
+  const resetGame = (): void => {
     initializeGame();
     setClickMode('normal');
   };
@@ -232,6 +317,6 @@ function App() {
       )}
     </div>
   );
-}
+};
 
 export default App; 

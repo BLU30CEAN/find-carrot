@@ -1,9 +1,8 @@
 .game-board {
   display: inline-block;
-  background: #2c3e50;
-  padding: 20px;
-  border-radius: 15px;
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+  background: #c0c0c0;
+  padding: 10px;
+  border: 3px outset #c0c0c0;
   margin: 20px 0;
 }
 
@@ -12,53 +11,87 @@
 }
 
 .cell {
-  width: 40px;
-  height: 40px;
-  border: 1px solid #34495e;
-  background: #34495e;
-  color: white;
-  font-size: 1.2rem;
+  width: 30px;
+  height: 30px;
+  border: 2px outset #c0c0c0;
+  background: #c0c0c0;
+  color: #000;
+  font-size: 1rem;
   cursor: pointer;
-  transition: all 0.2s;
+  transition: all 0.1s;
   display: flex;
   align-items: center;
   justify-content: center;
   font-weight: bold;
+  font-family: 'Courier New', monospace;
 }
 
 .cell:hover:not(:disabled) {
-  background: #4a5f7a;
-  transform: scale(1.05);
+  background: #d4d4d4;
 }
 
 .cell:active:not(:disabled) {
-  transform: scale(0.95);
+  border: 2px inset #c0c0c0;
+  background: #c0c0c0;
 }
 
 .cell.revealed {
-  background: #ecf0f1;
-  color: #2c3e50;
-  border-color: #bdc3c7;
+  background: #f0f0f0;
+  color: #000;
+  border: 1px solid #999;
 }
 
 .cell.carrot {
-  background: #e74c3c;
+  background: #ff0000;
   color: white;
 }
 
 .cell.exploded {
-  background: #e74c3c;
+  background: #ff0000;
   animation: explode 0.5s ease-out;
 }
 
 .cell.flagged {
-  background: #f39c12;
-  color: white;
+  background: #c0c0c0;
+  color: #000;
 }
 
 .cell.questioned {
-  background: #9b59b6;
-  color: white;
+  background: #c0c0c0;
+  color: #000;
+}
+
+/* 주변 당근 개수별 색상 */
+.cell.neighbor-1 {
+  color: #0000ff;
+}
+
+.cell.neighbor-2 {
+  color: #008200;
+}
+
+.cell.neighbor-3 {
+  color: #ff0000;
+}
+
+.cell.neighbor-4 {
+  color: #000084;
+}
+
+.cell.neighbor-5 {
+  color: #840000;
+}
+
+.cell.neighbor-6 {
+  color: #008284;
+}
+
+.cell.neighbor-7 {
+  color: #000000;
+}
+
+.cell.neighbor-8 {
+  color: #848284;
 }
 
 .cell:disabled {
@@ -80,12 +113,12 @@
 
 @media (max-width: 768px) {
   .cell {
-    width: 35px;
-    height: 35px;
-    font-size: 1rem;
+    width: 25px;
+    height: 25px;
+    font-size: 0.8rem;
   }
   
   .game-board {
-    padding: 15px;
+    padding: 8px;
   }
 } 
